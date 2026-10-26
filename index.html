@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Identifikasi Gambar - Ini Kacamata?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chau+Philomene+One&family=Kaushan+Script&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#3a3b3f; --red:#ff2d2d; --blob:#e6e6e6; --peach:#fdeee4; --bg:#fff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Chau Philomene One',system-ui,sans-serif; color:var(--ink); background:var(--bg);
+    overflow-x:hidden; position:relative; min-height:100vh;
+  }
+
+  /* ===== LOADING SCREEN ===== */
+  #loader{
+    position:fixed; inset:0; z-index:100; background:#fff;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;
+    transition:transform .9s cubic-bezier(.77,0,.18,1);
+  }
+  #loader.done{transform:translateY(-100%)}
+  .glasses{width:150px;height:auto;overflow:visible}
+  .glasses path,.glasses circle{
+    fill:none; stroke:#111; stroke-width:5; stroke-linecap:round; stroke-linejoin:round;
+    stroke-dasharray:400; stroke-dashoffset:400;
+    animation:draw 1.6s ease forwards;
+  }
+  .glasses .r{animation-delay:.2s}
+  .glasses .b{animation-delay:.9s}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  .load-text{font-weight:800;font-size:18px;letter-spacing:.3px}
+  .load-text span{display:inline-block;animation:dot 1.2s infinite}
+  .load-text span:nth-child(2){animation-delay:.2s}
+  .load-text span:nth-child(3){animation-delay:.4s}
+  @keyframes dot{0%,100%{opacity:.2}50%{opacity:1}}
+  .bar{width:220px;height:6px;background:#eee;border-radius:99px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--red);border-radius:99px;transition:width .2s}
+  #pct{font-size:14px;color:#888;font-weight:700}
+
+  /* ===== BACKGROUND BLOBS ===== */
+  .blob{position:absolute;z-index:0;pointer-events:none}
+  .b1{top:-120px;left:-160px;width:620px;height:520px;background:var(--blob);border-radius:60% 40% 55% 45%/55% 60% 40% 45%}
+  .b2{top:-130px;right:-60px;width:380px;height:300px;background:var(--peach);border-radius:45% 55% 60% 40%/60% 50% 50% 40%}
+  .b3{bottom:-90px;left:-110px;width:420px;height:300px;background:#efefef;border-radius:55% 45% 50% 50%/50% 55% 45% 50%}
+  .b4{bottom:8%;right:6%;width:360px;height:360px;background:#ececec;border-radius:50% 50% 45% 55%/55% 45% 55% 45%}
+
+  /* ===== NAV ===== */
+  nav{
+    position:relative; z-index:5; display:flex; justify-content:flex-end; align-items:center;
+    gap:34px; padding:48px 6vw 0; font-weight:800; font-size:15px;
+  }
+  nav a{color:#111;text-decoration:none;text-transform:uppercase;position:relative}
+  nav a::after{content:"";position:absolute;left:0;bottom:-5px;height:2px;width:0;background:var(--red);transition:width .25s}
+  nav a:hover::after,nav a:focus-visible::after{width:100%}
+  nav a:focus-visible{outline:2px solid var(--red);outline-offset:6px}
+
+  /* ===== HERO ===== */
+  .hero{
+    position:relative; z-index:2; display:grid; grid-template-columns:1.05fr 1fr; align-items:center;
+    min-height:calc(100vh - 150px); padding:0 6vw 90px; gap:20px;
+  }
+  .text{max-width:560px}
+  h1{
+    font-family:'Chau Philomene One',system-ui,sans-serif; font-size:clamp(46px,6.2vw,76px);
+    line-height:1.08; color:var(--ink); font-weight:800; letter-spacing:-.03em;
+  }
+  .line{display:block;overflow:hidden}
+  .line > span{display:block;transform:translateY(110%)}
+  .go .line > span{animation:rise .9s cubic-bezier(.2,.8,.2,1) forwards}
+  .go .line:nth-child(2) > span{animation-delay:.15s}
+  .sub{
+    font-family:'Chau Philomene One',system-ui,sans-serif; font-weight:800; color:var(--red);
+    font-size:clamp(34px,4.2vw,50px); margin-top:6px; line-height:1.1;
+  }
+  .go .sub > span{animation-delay:.3s}
+  @keyframes rise{to{transform:translateY(0)}}
+
+  .desc{
+    margin-top:26px; font-weight:700; font-size:17px; line-height:1.55; color:#444; opacity:0;
+  }
+  .go .desc{animation:fade .8s .6s ease forwards}
+  @keyframes fade{to{opacity:1}}
+
+  .btn{
+    display:inline-block; margin-top:30px; padding:14px 30px; border-radius:99px;
+    background:var(--red); color:#fff; font:800 16px 'Chau Philomene One',system-ui,sans-serif; text-decoration:none;
+    box-shadow:0 8px 0 #b81414; transition:transform .15s, box-shadow .15s; opacity:0;
+  }
+  .go .btn{animation:fade .8s .85s ease forwards}
+  .btn:hover{transform:translateY(3px);box-shadow:0 5px 0 #b81414}
+  .btn:active{transform:translateY(8px);box-shadow:0 0 0 #b81414}
+  .btn:focus-visible{outline:3px solid #111;outline-offset:4px}
+
+  .art{position:relative;display:flex;justify-content:center;align-items:flex-end;opacity:0;transform:translateX(60px)}
+  .go .art{animation:slidein 1s .4s cubic-bezier(.2,.8,.2,1) forwards}
+  @keyframes slidein{to{opacity:1;transform:none}}
+  .art img{max-width:100%;max-height:78vh;height:auto;display:block}
+  .art .fallback{
+    display:none; width:min(380px,80%); aspect-ratio:3/4; border:3px dashed #bbb; border-radius:24px;
+    align-items:center; justify-content:center; text-align:center; padding:20px; color:#888; font-weight:700;
+  }
+
+  /* ===== TEKS MENGALIR (MARQUEE) ===== */
+  .ticker{
+    position:fixed; left:0; right:0; bottom:0; z-index:6; overflow:hidden; white-space:nowrap;
+    background:rgba(255,255,255,.88); backdrop-filter:blur(4px); padding:12px 0; border-top:2px solid #111;
+  }
+  .track{display:inline-block;animation:flow 22s linear infinite;font-weight:800;font-size:18px;color:var(--ink)}
+  .track span{padding-right:70px}
+  .ticker:hover .track{animation-play-state:paused}
+  @keyframes flow{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+
+  /* ===== BAGIAN BAWAH ===== */
+  body{padding-bottom:0}
+  .top{position:relative;overflow:hidden}
+  html{scroll-behavior:smooth}
+  section.blk{position:relative;z-index:2;padding:90px 6vw 20px;max-width:1100px;margin:0 auto}
+  section.blk h2{font-family:'Chau Philomene One',system-ui,sans-serif;font-size:clamp(30px,4vw,44px);line-height:1.15;margin-bottom:12px;font-weight:800;letter-spacing:-.02em}
+  section.blk > p.lead{font-weight:700;font-size:17px;color:#555;max-width:620px;line-height:1.55}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:34px;list-style:none}
+  .steps li{border-left:4px solid var(--red);padding:4px 0 4px 18px}
+  .steps b{display:block;font-size:22px;color:var(--red);margin-bottom:4px}
+  .steps h3{font-size:19px;margin-bottom:6px}
+  .steps p{font-weight:700;color:#555;line-height:1.5;font-size:15px}
+
+  .game-head{display:flex;flex-wrap:wrap;gap:14px 28px;align-items:center;margin:26px 0 20px;font-weight:800}
+  .stat{background:#f3f3f3;border-radius:14px;padding:8px 16px;font-size:15px}
+  .stat strong{color:var(--red);font-size:18px;margin-left:4px}
+  .btn-small{font:800 15px 'Chau Philomene One',system-ui,sans-serif;background:#111;color:#fff;border:0;border-radius:99px;padding:10px 22px;cursor:pointer}
+  .btn-small:hover{background:var(--red)}
+  .btn-small:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+  .board{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;max-width:520px}
+  .card{aspect-ratio:1;perspective:700px;background:none;border:0;cursor:pointer;padding:0}
+  .card:focus-visible{outline:3px solid var(--red);outline-offset:3px;border-radius:16px}
+  .inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .45s}
+  .card.open .inner,.card.match .inner{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;border-radius:16px;display:flex;align-items:center;justify-content:center;backface-visibility:hidden;font-size:clamp(28px,6vw,44px)}
+  .front{background:#111;color:#fff;font-size:26px;font-weight:800}
+  .back{background:#fff;border:3px solid #111;transform:rotateY(180deg)}
+  .card.match .back{background:#ffe3e3;border-color:var(--red)}
+  .msg{margin-top:18px;font-weight:800;font-size:18px;min-height:28px;color:var(--red)}
+
+  section.blk.cta{margin:-30px auto 0;padding:0 6vw 150px;text-align:center}
+  .cta .btn{opacity:1}
+  @media (max-width:820px){.steps{grid-template-columns:1fr}}
+
+  /* ===== RESPONSIF ===== */
+  @media (max-width:820px){
+    .hero{grid-template-columns:1fr;text-align:center;padding-bottom:130px}
+    .text{margin:0 auto}
+    .art{order:-1;margin-top:10px}
+    .art img{max-height:42vh}
+    nav{gap:22px;padding-top:28px;justify-content:center}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.01s!important;animation-delay:0s!important;transition-duration:.01s!important}
+    .track{animation:none}
+  }
+
+  /* ===== TEMA LUKISAN LANGIT (sesuai desain) ===== */
+  :root{ --ink:#4a3a22; --red:#4a3a22; --bg:#e9c98f; --script:'Handelson One','Handelson Three','Kaushan Script',cursive; }
+  body{
+    font-family:'Chau Philomene One',system-ui,sans-serif;
+    background:
+      radial-gradient(ellipse 40% 22% at 78% 14%, rgba(222,150,80,.65), transparent 70%),
+      radial-gradient(ellipse 30% 18% at 14% 20%, rgba(190,140,95,.45), transparent 70%),
+      radial-gradient(ellipse 35% 20% at 30% 62%, rgba(214,160,100,.45), transparent 70%),
+      radial-gradient(ellipse 30% 18% at 70% 75%, rgba(225,175,110,.45), transparent 70%),
+      linear-gradient(180deg,#e2c28f 0%,#ecd0a0 45%,#e3bf88 100%);
+    background-attachment:fixed;
+  }
+  #loader{background:#ecd0a0}
+  .glasses path,.glasses circle{stroke:#4a3a22}
+  .bar{background:rgba(74,58,34,.18)}
+  .bar i{background:#4a3a22}
+  #pct{color:#6b5636}
+  nav{gap:0;justify-content:flex-end;align-items:center;padding:60px 6vw 0;font-size:26px;letter-spacing:.5px}
+  nav a{color:#111;margin-right:90px}
+  nav a.icon{margin-right:60px;display:flex}
+  nav a::after{background:#4a3a22}
+  .burger{background:none;border:0;cursor:pointer;padding:0;display:flex}
+  .menu{position:absolute;right:6vw;top:120px;background:#f3dfb7;border:2px solid #4a3a22;border-radius:12px;padding:10px 0;display:none;flex-direction:column;min-width:170px;z-index:20}
+  .menu.open{display:flex}
+  .menu a{margin:0;padding:10px 22px;font-size:20px}
+  nav{position:relative}
+  .hero{display:block;position:relative;min-height:calc(100vh - 120px);padding:0 6vw}
+  .text{max-width:min(62vw,1100px);margin:0;padding-top:4vh;text-align:center}
+  h1{font-size:clamp(44px,7vw,112px);text-transform:uppercase;letter-spacing:0;line-height:1;font-weight:400;text-align:left;margin-left:2vw}
+  .line{overflow:visible;padding:.08em 0}
+  .sub{font-family:var(--script);font-weight:400;color:#4a3a22;font-size:clamp(50px,8vw,130px);text-align:left;margin:.1em 0 0 4vw;line-height:1.1;transform:rotate(-3deg);transform-origin:left}
+  .desc{font-family:'Chau Philomene One',sans-serif;font-weight:400;color:#3b2e1a;font-size:clamp(18px,2.1vw,36px);line-height:1.35;margin-top:5vh;max-width:none}
+  .btn{background:#4a3a22;box-shadow:0 8px 0 #2a2012;font-weight:400}
+  .btn:hover{box-shadow:0 5px 0 #2a2012}
+  .art{position:absolute;right:-2vw;bottom:0;width:min(46vw,860px);height:auto;margin:0}
+  .art img{max-height:92vh;width:100%;object-fit:contain;object-position:bottom right}
+  .ticker{background:rgba(236,208,160,.92);border-top-color:#4a3a22}
+  .track{font-family:'Chau Philomene One',sans-serif;font-weight:400}
+  section.blk h2,.steps h3{font-weight:400}
+  .stat{background:rgba(255,255,255,.35)}
+  .btn-small{background:#4a3a22}
+  @media (max-width:820px){
+    nav{padding-top:28px;font-size:18px;justify-content:center}
+    nav a{margin-right:26px}nav a.icon{margin-right:16px}
+    .hero{padding-bottom:140px;text-align:center}
+    .text{max-width:100%}
+    h1,.sub{text-align:center;margin-left:0;transform:none}
+    .art{position:relative;order:0;width:80%;margin:20px auto 0;right:auto}
+    .menu{top:70px}
+  }
+
+  /* ===== DUA KARAKTER + ANIMASI SCROLL ===== */
+  .art{height:92vh;width:min(48vw,880px);display:block}
+  .art img.char{position:absolute;max-height:none;width:auto;object-fit:contain;will-change:transform,opacity}
+  .art img.char-back{right:0;top: -8%;height:80%;opacity:.55;z-index:1;
+    transform:translate(calc(var(--sy,0)*.28px),calc(var(--sy,0)*.18px)) rotate(calc(var(--sy,0)*.012deg))}
+  .art img.char-front{right: 25px;bottom:0;height:82%;z-index:2;
+    transform:translate(calc(var(--sy,0)*-.10px),calc(var(--sy,0)*-.12px)) scale(calc(1 + var(--sy,0)*.0004))}
+  .art .fallback{position:absolute;inset:auto 0 0 auto}
+  /* tombol dinaikkan sedikit */
+  .desc{margin-top:3.5vh}
+  .btn{margin-top:14px;position:relative;top:-6px}
+  @media (max-width:820px){
+    .art{height:auto;width:90%;aspect-ratio:4/5;margin:20px auto 0}
+    .art img.char-back{height:70%}.art img.char-front{height:84%}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .art img.char-back,.art img.char-front{transform:none!important}
+  }
+
+  /* perbaikan tata letak */
+  h1{font-size:clamp(36px,5.4vw,96px);white-space:nowrap}
+  .sub{font-size:clamp(44px,7vw,120px);white-space:nowrap}
+  .text{position:relative;z-index:3}
+  .art{height:calc(100% - 20px);max-height:100vh}
+  .art img.char{background:none;border:0;box-shadow:none;outline:0}
+  @media (max-width:820px){h1,.sub{white-space:normal}}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loader" aria-label="Memuat halaman">
+  <svg class="glasses" viewBox="0 0 220 90" aria-hidden="true">
+    <circle class="r" cx="55"  cy="50" r="34"/>
+    <circle class="r" cx="165" cy="50" r="34"/>
+    <path class="b" d="M89 46 Q110 28 131 46"/>
+    <path class="b" d="M21 46 L4 30"/>
+    <path class="b" d="M199 46 L216 30"/>
+  </svg>
+  <div class="load-text">Memuat<span>.</span><span>.</span><span>.</span></div>
+  <div class="bar"><i id="fill"></i></div>
+  <div id="pct">0%</div>
+</div>
+
+<header class="top" id="beranda">
+<!-- DEKORASI -->
+
+
+<nav>
+  <a href="#beranda">Beranda</a>
+  <a href="https://GANTI-DENGAN-LINK-APP-ANDA.streamlit.app" target="_blank" rel="noopener">Streamlit</a>
+  <a class="icon" href="#cara" aria-label="Cari">
+    <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#111" stroke-width="2.6" stroke-linecap="round"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l6 6"/></svg>
+  </a>
+  <button class="burger" id="burger" type="button" aria-label="Menu" aria-expanded="false">
+    <svg viewBox="0 0 24 24" width="52" height="42" fill="none" stroke="#111" stroke-width="2"><path d="M1 4h22M1 12h22M1 20h22"/></svg>
+  </button>
+  <div class="menu" id="menu">
+    <a href="#cara">Cara kerja</a>
+    <a href="#game">Game</a>
+  </div>
+</nav>
+
+<main class="hero" id="hero">
+  <section class="text">
+    <h1>
+      <span class="line"><span>identifikasi gambar</span></span>
+    </h1>
+    <div class="sub line"><span>ini kacamata ??</span></div>
+    <p class="desc">
+      Unggah gambar dan biarkan teknologi kecerdasan buatan membantu mengidentifikasi apakah seseorang
+      menggunakan kacamata atau tidak. Dapatkan hasil identifikasi secara otomatis, cepat, dan praktis.
+    </p>
+    <a class="btn" href="https://GANTI-DENGAN-LINK-APP-ANDA.streamlit.app" target="_blank" rel="noopener">Buka aplikasi Streamlit</a>
+  </section>
+
+  <div class="art" id="art">
+    <img class="char char-back" id="charBack" src="karakter-belakang.png" alt="" aria-hidden="true"
+         onerror="this.style.display='none'">
+    <img class="char char-front" id="charFront" src="karakter-depan.png" alt="Ilustrasi karakter berkacamata"
+         onerror="this.style.display='none';document.getElementById('fb').style.display='flex'">
+    <div class="fallback" id="fb">Simpan gambar karakter dengan nama<br>karakter-depan.png dan karakter-belakang.png<br>di folder yang sama dengan index.html</div>
+  </div>
+</main>
+</header>
+
+<section class="blk" id="cara">
+  <h2>Cara kerjanya</h2>
+  <p class="lead">Tiga langkah singkat dari gambar sampai hasil.</p>
+  <ol class="steps">
+    <li><b>1</b><h3>Unggah gambar</h3><p>Pilih foto wajah dari galeri Anda di aplikasi Streamlit.</p></li>
+    <li><b>2</b><h3>Model menganalisis</h3><p>Model kecerdasan buatan mencari ciri kacamata pada gambar.</p></li>
+    <li><b>3</b><h3>Lihat hasilnya</h3><p>Aplikasi menampilkan apakah orang pada foto memakai kacamata.</p></li>
+  </ol>
+</section>
+
+<section class="blk" id="game">
+  <h2>Sambil menunggu, main dulu</h2>
+  <p class="lead">Cocokkan semua pasangan kartu dengan langkah sesedikit mungkin.</p>
+  <div class="game-head">
+    <div class="stat">Langkah<strong id="moves">0</strong></div>
+    <div class="stat">Waktu<strong id="time">0</strong>d</div>
+    <div class="stat">Rekor<strong id="best">-</strong></div>
+    <button class="btn-small" id="reset" type="button">Acak ulang</button>
+  </div>
+  <div class="board" id="board" role="group" aria-label="Papan permainan kartu"></div>
+  <div class="msg" id="msg" role="status" aria-live="polite"></div>
+</section>
+
+<section class="blk cta">
+  <h2>Sudah siap mencoba?</h2>
+  <a class="btn" href="https://GANTI-DENGAN-LINK-APP-ANDA.streamlit.app" target="_blank" rel="noopener">Buka aplikasi Streamlit</a>
+</section>
+
+<!-- TEKS MENGALIR -->
+<div class="ticker" aria-label="Projek ini dibuat oleh Dony Rizky Hidayat 2308108010002">
+  <div class="track" aria-hidden="true">
+    <span>Projek ini dibuat oleh Dony Rizky Hidayat 2308108010002</span>
+    <span>Projek ini dibuat oleh Dony Rizky Hidayat 2308108010002</span>
+    <span>Projek ini dibuat oleh Dony Rizky Hidayat 2308108010002</span>
+    <span>Projek ini dibuat oleh Dony Rizky Hidayat 2308108010002</span>
+  </div>
+</div>
+
+<script>
+  // Animasi karakter saat scroll (parallax)
+  (function(){
+    const root=document.documentElement; let ticking=false;
+    function upd(){ root.style.setProperty('--sy',Math.min(window.scrollY,900)); ticking=false; }
+    window.addEventListener('scroll',()=>{ if(!ticking){ticking=true;requestAnimationFrame(upd);} },{passive:true});
+    upd();
+  })();
+  const burger=document.getElementById('burger'), menu=document.getElementById('menu');
+  burger.addEventListener('click',()=>{const o=menu.classList.toggle('open');burger.setAttribute('aria-expanded',o)});
+  menu.addEventListener('click',()=>{menu.classList.remove('open');burger.setAttribute('aria-expanded','false')});
+  // Progres loading nyata: menunggu semua sumber (font, gambar) selesai, minimal 2,2 detik agar animasi tampil utuh
+  const fill = document.getElementById('fill');
+  const pct  = document.getElementById('pct');
+  const loader = document.getElementById('loader');
+  const MIN = 2200, start = performance.now();
+  let loaded = false, shown = 0;
+
+  window.addEventListener('load', () => loaded = true);
+
+  function tick(now){
+    const t = Math.min((now - start) / MIN, 1);
+    const target = loaded ? t * 100 : Math.min(t * 100, 90);
+    shown += (target - shown) * 0.12;
+    const v = Math.round(shown);
+    fill.style.width = v + '%';
+    pct.textContent = v + '%';
+    if (loaded && t >= 1 && shown > 99) return finish();
+    requestAnimationFrame(tick);
+  }
+  function finish(){
+    fill.style.width = '100%'; pct.textContent = '100%';
+    setTimeout(() => {
+      loader.classList.add('done');
+      document.body.classList.add('go');
+      setTimeout(() => loader.remove(), 1000);
+    }, 250);
+  }
+  requestAnimationFrame(tick);
+
+  // ===== GAME KARTU PASANGAN =====
+  (function(){
+    const icons=['🕶️','👓','🧠','📊','🤖','📷'];
+    const board=document.getElementById('board'), mv=document.getElementById('moves'),
+          tm=document.getElementById('time'), bs=document.getElementById('best'), msg=document.getElementById('msg');
+    let first=null, lock=false, moves=0, pairs=0, secs=0, timer=null;
+    let best=null;
+    try{ best=parseInt(localStorage.getItem('bestMoves'))||null; }catch(e){}
+    bs.textContent = best ? best : '-';
+
+    function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+    function start(){
+      clearInterval(timer); timer=null;
+      first=null; lock=false; moves=0; pairs=0; secs=0;
+      mv.textContent=0; tm.textContent=0; msg.textContent='';
+      board.innerHTML='';
+      shuffle([...icons,...icons]).forEach(ic=>{
+        const b=document.createElement('button');
+        b.className='card'; b.type='button'; b.dataset.icon=ic; b.setAttribute('aria-label','Kartu tertutup');
+        b.innerHTML='<div class="inner"><div class="face front">?</div><div class="face back">'+ic+'</div></div>';
+        b.addEventListener('click',()=>flip(b));
+        board.appendChild(b);
+      });
+    }
+
+    function flip(c){
+      if(lock||c.classList.contains('open')||c.classList.contains('match')) return;
+      if(!timer) timer=setInterval(()=>{secs++;tm.textContent=secs;},1000);
+      c.classList.add('open'); c.setAttribute('aria-label','Kartu '+c.dataset.icon);
+      if(!first){ first=c; return; }
+      moves++; mv.textContent=moves; lock=true;
+      if(first.dataset.icon===c.dataset.icon){
+        [first,c].forEach(x=>{x.classList.remove('open');x.classList.add('match');});
+        first=null; lock=false; pairs++;
+        if(pairs===icons.length) win();
+      } else {
+        const a=first; first=null;
+        setTimeout(()=>{ [a,c].forEach(x=>{x.classList.remove('open');x.setAttribute('aria-label','Kartu tertutup');}); lock=false; },800);
+      }
+    }
+
+    function win(){
+      clearInterval(timer); timer=null;
+      let text='Selesai dalam '+moves+' langkah dan '+secs+' detik.';
+      if(!best || moves<best){
+        best=moves; bs.textContent=best; text+=' Rekor baru!';
+        try{ localStorage.setItem('bestMoves',best); }catch(e){}
+      }
+      msg.textContent=text;
+    }
+
+    document.getElementById('reset').addEventListener('click',start);
+    start();
+  })();
+</script>
+</body>
+</html>
