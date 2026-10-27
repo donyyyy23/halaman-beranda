@@ -219,18 +219,23 @@
   .art img.char{position:absolute;max-height:none;width:auto;object-fit:contain;will-change:transform,opacity}
   .art img.char-back{right:0;top: -8%;height:80%;opacity:.55;z-index:1;
     transform:translate(calc(var(--sy,0)*.28px),calc(var(--sy,0)*.18px)) rotate(calc(var(--sy,0)*.012deg))}
-  .art img.char-front{right: 25px;bottom:0;height:82%;z-index:2;
+  .art img.char-front{right: 25px;bottom:0;height:82%;z-index:3;
     transform:translate(calc(var(--sy,0)*-.10px),calc(var(--sy,0)*-.12px)) scale(calc(1 + var(--sy,0)*.0004))}
   .art .fallback{position:absolute;inset:auto 0 0 auto}
+
+  /* karakter tengah: di belakang gambar depan, di depan gambar belakang */
+  .art img.char-mid{right:16%;top:-10%;height:110%;opacity:.5;z-index:2;
+    transform:translate(calc(var(--sy,0)*-.22px),calc(var(--sy,0)*.10px)) rotate(calc(var(--sy,0)*-.015deg)) scale(calc(1 + var(--sy,0)*.0003))}
+  @media (max-width:820px){.art img.char-mid{height:800px;right:45%;top:-90%; width:220%}}
   /* tombol dinaikkan sedikit */
   .desc{margin-top:3.5vh}
   .btn{margin-top:14px;position:relative;top:-6px}
   @media (max-width:820px){
     .art{height:auto;width:90%;aspect-ratio:4/5;margin:20px auto 0}
-    .art img.char-back{height:70%}.art img.char-front{height:84%}
+    .art img.char-back{height:70%;right:-15%;top:-20%}.art img.char-front{height:84%;right:15%;top:-5%}
   }
   @media (prefers-reduced-motion:reduce){
-    .art img.char-back,.art img.char-front{transform:none!important}
+    .art img.char-back,.art img.char-mid,.art img.char-front{transform:none!important}
   }
 
   /* perbaikan tata letak */
@@ -264,7 +269,7 @@
 
 <nav>
   <a href="#beranda">Beranda</a>
-  <a href="https://GANTI-DENGAN-LINK-APP-ANDA.streamlit.app" target="_blank" rel="noopener">Streamlit</a>
+  <a href="https://donybigdata.streamlit.app/" target="_blank" rel="noopener">Streamlit</a>
   <a class="icon" href="#cara" aria-label="Cari">
     <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#111" stroke-width="2.6" stroke-linecap="round"><circle cx="10" cy="10" r="6.5"/><path d="M15 15l6 6"/></svg>
   </a>
@@ -287,15 +292,17 @@
       Unggah gambar dan biarkan teknologi kecerdasan buatan membantu mengidentifikasi apakah seseorang
       menggunakan kacamata atau tidak. Dapatkan hasil identifikasi secara otomatis, cepat, dan praktis.
     </p>
-    <a class="btn" href="https://GANTI-DENGAN-LINK-APP-ANDA.streamlit.app" target="_blank" rel="noopener">Buka aplikasi Streamlit</a>
+    <a class="btn" href="https://donybigdata.streamlit.app/" target="_blank" rel="noopener">Buka aplikasi Streamlit</a>
   </section>
 
   <div class="art" id="art">
     <img class="char char-back" id="charBack" src="karakter-belakang.png" alt="" aria-hidden="true"
          onerror="this.style.display='none'">
+    <img class="char char-mid" id="charMid" src="karakter-tengah.png" alt="" aria-hidden="true"
+         onerror="this.style.display='none'">
     <img class="char char-front" id="charFront" src="karakter-depan.png" alt="Ilustrasi karakter berkacamata"
          onerror="this.style.display='none';document.getElementById('fb').style.display='flex'">
-    <div class="fallback" id="fb">Simpan gambar karakter dengan nama<br>karakter-depan.png dan karakter-belakang.png<br>di folder yang sama dengan index.html</div>
+    <div class="fallback" id="fb">Simpan gambar karakter dengan nama<br>karakter-depan.png, karakter-tengah.png, dan karakter-belakang.png<br>di folder yang sama dengan index.html</div>
   </div>
 </main>
 </header>
@@ -325,7 +332,7 @@
 
 <section class="blk cta">
   <h2>Sudah siap mencoba?</h2>
-  <a class="btn" href="https://GANTI-DENGAN-LINK-APP-ANDA.streamlit.app" target="_blank" rel="noopener">Buka aplikasi Streamlit</a>
+  <a class="btn" href="https://donybigdata.streamlit.app/" target="_blank" rel="noopener">Buka aplikasi Streamlit</a>
 </section>
 
 <!-- TEKS MENGALIR -->
@@ -340,11 +347,21 @@
 
 <script>
   // Animasi karakter saat scroll (parallax)
-  (function(){
-    const root=document.documentElement; let ticking=false;
-    function upd(){ root.style.setProperty('--sy',Math.min(window.scrollY,900)); ticking=false; }
-    window.addEventListener('scroll',()=>{ if(!ticking){ticking=true;requestAnimationFrame(upd);} },{passive:true});
-    upd();
+(function(){
+    const art=document.getElementById('art');
+    let target=0, cur=0, running=false;
+    function frame(){
+      cur += (target-cur)*0.12;
+      if(Math.abs(target-cur)<0.05) cur=target;
+      art.style.setProperty('--sy',cur.toFixed(2));
+      if(cur!==target) requestAnimationFrame(frame); else running=false;
+    }
+    function onScroll(){
+      target=Math.min(window.scrollY,900);
+      if(!running){running=true;requestAnimationFrame(frame);}
+    }
+    window.addEventListener('scroll',onScroll,{passive:true});
+    onScroll();
   })();
   const burger=document.getElementById('burger'), menu=document.getElementById('menu');
   burger.addEventListener('click',()=>{const o=menu.classList.toggle('open');burger.setAttribute('aria-expanded',o)});
